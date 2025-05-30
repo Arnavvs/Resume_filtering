@@ -5,11 +5,11 @@ import requests
 import pandas as pd
 import io
 import json
-from werkzeug.utils import secure_filename # Import secure_filename for consistency
+from werkzeug.utils import secure_filename
 
 # --- Configuration ---
-# IMPORTANT: This URL will be updated after you deploy your Flask backend on Vercel
-FLASK_BACKEND_URL = "https://resume-filtering-ieg6.onrender.com" # Replace with your actual Vercel URL!
+# IMPORTANT: This URL will be updated after you deploy your Flask backend on Render
+FLASK_BACKEND_URL = "https://resume-filtering-ieg6.onrender.com" # Replace with your actual Render URL!
 
 st.set_page_config(layout="wide", page_title="AI-Powered Resume Screener Dashboard", page_icon="📝")
 
@@ -62,7 +62,7 @@ def process_single_resume(job_description, uploaded_file, strictness):
         return None
 
 def display_results_table(results):
-    """Displays batch processing results in a structured table."""
+    """Displays batch processing results in a structured table, handling errors gracefully."""
     data = []
     for item in results:
         row = {"Filename": item["filename"]}
@@ -74,28 +74,61 @@ def display_results_table(results):
             row["Soft Skills Score"] = score.get("softskills_score", 0)
             row["Extracurricular Score"] = score.get("extracurricular_score", 0)
             row["Client Need Score"] = score.get("client_need_score", 0)
+            row["Status"] = "Processed" # Explicitly add status
             # Add details for expander
             row["Technical Reason"] = score.get("technical_reason", "N/A")
             row["Soft Skills Reason"] = score.get("softskills_reason", "N/A")
             row["Extracurricular Reason"] = score.get("extracurricular_reason", "N/A")
             row["Client Need Reason"] = score.get("client_need_reason", "N/A")
+            row["Details"] = "" # No error details for successful processing
         elif "error" in item:
-            row["Status"] = "Error"
+            # Populate all required columns with "N/A" if there's an error
+            row["Name"] = "N/A"
+            row["Aggregate Score"] = "N/A"
+            row["Technical Score"] = "N/A"
+            row["Soft Skills Score"] = "N/A"
+            row["Extracurricular Score"] = "N/A"
+            row["Client Need Score"] = "N/A"
+            row["Status"] = "Error" # Explicitly add status
             row["Details"] = item.get("error", "Unknown error")
+            row["Technical Reason"] = "N/A" # Default for error rows
+            row["Soft Skills Reason"] = "N/A" # Default for error rows
+            row["Extracurricular Reason"] = "N/A" # Default for error rows
+            row["Client Need Reason"] = "N/A" # Default for error rows
+        else:
+            # Fallback for unexpected item structure, treating as error
+            row["Name"] = "N/A"
+            row["Aggregate Score"] = "N/A"
+            row["Technical Score"] = "N/A"
+            row["Soft Skills Score"] = "N/A"
+            row["Extracurricular Score"] = "N/A"
+            row["Client Need Score"] = "N/A"
+            row["Status"] = "Unknown Response"
+            row["Details"] = "Backend returned unexpected data structure."
+            row["Technical Reason"] = "N/A" # Default for unknown rows
+            row["Soft Skills Reason"] = "N/A" # Default for unknown rows
+            row["Extracurricular Reason"] = "N/A" # Default for unknown rows
+            row["Client Need Reason"] = "N/A" # Default for unknown rows
+
         data.append(row)
 
     df = pd.DataFrame(data)
 
     if not df.empty:
-        # Separate columns for display and expander details
-        display_cols = ["Filename", "Name", "Aggregate Score", "Technical Score", "Soft Skills Score", "Extracurricular Score", "Client Need Score"]
-        detail_cols = ["Technical Reason", "Soft Skills Reason", "Extracurricular Reason", "Client Need Reason"]
+        # Define the columns that should always be displayed in the main dataframe
+        display_cols = ["Filename", "Name", "Aggregate Score", "Technical Score",
+                        "Soft Skills Score", "Extracurricular Score", "Client Need Score",
+                        "Status"]
+
+        # Ensure all display_cols are present in the DataFrame (should be now with the above logic)
+        df = df.reindex(columns=display_cols + ["Details", "Technical Reason", "Soft Skills Reason", "Extracurricular Reason", "Client Need Reason"])
+        df = df.fillna('N/A') # Fill any NaN values introduced by reindex with 'N/A'
 
         st.dataframe(df[display_cols], use_container_width=True, hide_index=True)
 
         for i, row in df.iterrows():
-            with st.expander(f"Details for {row['Filename']}: {row.get('Name', '')}"):
-                if "Status" in row and row["Status"] == "Error":
+            with st.expander(f"Details for {row['Filename']}: {row.get('Name', 'N/A')}"):
+                if row["Status"] == "Error" or row["Status"] == "Unknown Response":
                     st.error(f"Error: {row['Details']}")
                 else:
                     st.write(f"**Technical:** Score {row['Technical Score']} - {row['Technical Reason']}")
@@ -172,7 +205,6 @@ if st.session_state.raw_results:
     st.subheader("Candidate Recommendations")
 
     if st.session_state.raw_results:
-        # Filter out any error rows to only consider successfully processed candidates
         successful_processed_results = [
             item for item in st.session_state.raw_results if "score" in item
         ]
@@ -180,14 +212,13 @@ if st.session_state.raw_results:
             num_recommendations = st.slider(
                 "Number of recommendations to generate:",
                 min_value=1,
-                max_value=len(successful_processed_results), # Max up to the number of successfully processed candidates
-                value=min(3, len(successful_processed_results)), # Default to 3 or less if fewer candidates
+                max_value=len(successful_processed_results),
+                value=min(3, len(successful_processed_results)),
                 help="Select how many top candidates you want recommendations for."
             )
             recommend_button = st.button("Get Recommendations")
 
             if recommend_button:
-                # Filter out error rows before sending only successful scores to recommendation API
                 successful_candidates_for_recommendation = [
                     item["score"] for item in successful_processed_results
                 ]
