@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename # Import secure_filename for consiste
 
 # --- Configuration ---
 # IMPORTANT: This URL will be updated after you deploy your Flask backend on Vercel
-FLASK_BACKEND_URL = "YOUR_VERCEL_BACKEND_URL_HERE" # Replace with your actual Vercel URL!
+FLASK_BACKEND_URL = "https://vercel.com/arnavs-projects-a858a554/resume-filtering/9F3nJdnvDpGzuNGW9Ap6wUWidNnj" # Replace with your actual Vercel URL!
 
 st.set_page_config(layout="wide", page_title="AI-Powered Resume Screener Dashboard", page_icon="📝")
 
