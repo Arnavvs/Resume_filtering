@@ -67,7 +67,7 @@ def process_resume_from_bytes(job_description_prompt: str, resume_bytes: bytes, 
     if not google_api_key:
         raise ValueError("GOOGLE_API_KEY environment variable not set. Please set it in your Render project settings.")
 
-    llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.0, google_api_key=google_api_key)
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.0, google_api_key=google_api_key)
 
     # 1. Define prompt for keyword extraction
     keyword_extraction_prompt = ChatPromptTemplate.from_messages(
@@ -160,7 +160,7 @@ def get_recommendations(candidate_scores: List[Dict[str, Any]], num_recommendati
     if not google_api_key:
         raise ValueError("GOOGLE_API_KEY environment variable not set. Please set it in your Render project settings.")
 
-    llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.0, google_api_key=google_api_key)
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.0, google_api_key=google_api_key)
 
     sorted_candidates = sorted(
         [s for s in candidate_scores if 'aggregate_score' in s],
