@@ -1,0 +1,10 @@
+Flask
+werkzeug
+pdfplumber
+pydantic~=2.0
+langchain-google-genai
+python-dotenv
+requests
+streamlit
+pandas
+flask-cors # NEW: Required for CORS in Flask backend
