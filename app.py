@@ -2,17 +2,14 @@
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 import os
-# Assuming process_resume_from_bytes and other models are in resume_filter.py
 from resume_filter import process_resume_from_bytes, ResumeScore, get_recommendations, RecommendationList
 from pydantic import ValidationError
 import json
-import io # NEW: Import io for in-memory file handling
-from flask_cors import CORS # NEW: Import CORS for cross-origin requests
+import io
+from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes (important for Streamlit frontend)
-
-# No UPLOAD_FOLDER needed for Vercel's serverless environment
 
 @app.route('/ping', methods=['GET'])
 def ping():
@@ -40,15 +37,12 @@ def screen_resume():
         return jsonify({"error": "No selected file"}), 400
 
     if resume_file:
-        # Read file content directly into memory
         resume_content = resume_file.read() # Read bytes from the uploaded file
 
         try:
-            # Call the new function that accepts bytes
             result: ResumeScore = process_resume_from_bytes(job_description_prompt, resume_content, strictness_level)
             return jsonify(result.model_dump()), 200
         except ValidationError as e:
-            # Use e.errors() for more detailed validation errors
             return jsonify({"error": "Data validation error from LLM output", "details": e.errors()}), 500
         except Exception as e:
             return jsonify({"error": f"An error occurred during resume screening: {str(e)}"}), 500
@@ -78,10 +72,7 @@ def batch_screen_resumes():
     for resume_file in resume_files:
         filename = secure_filename(resume_file.filename)
         try:
-            # Read file content directly into memory for each file
             resume_content = resume_file.read()
-
-            # Call the new function that accepts bytes
             score: ResumeScore = process_resume_from_bytes(job_description_prompt, resume_content, strictness_level)
             results.append({"filename": filename, "score": score.model_dump()})
         except ValidationError as e:
@@ -111,5 +102,3 @@ def recommend_candidates():
         return jsonify({"error": "Data validation error for recommendations", "details": e.errors()}), 500
     except Exception as e:
         return jsonify({"error": f"An error occurred during recommendation generation: {str(e)}"}), 500
-
-# No if __name__ == '__main__': app.run(...) needed for Vercel deployment
