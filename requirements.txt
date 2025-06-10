@@ -7,5 +7,4 @@ python-dotenv
 requests
 streamlit
 pandas
-flask-cors
-gunicorn # NEW: Required for CORS in Flask backend
+flask-cors # NEW: Required for CORS in Flask backend
